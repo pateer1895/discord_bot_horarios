@@ -122,3 +122,16 @@ async def on_reaction_remove(reaction, user):
 
 
 bot.run(os.environ["TOKEN"])
+@bot.command()
+async def horarios(ctx):
+    def format_list(lst):
+        return "• " + "\n• ".join(lst) if lst else "• (nadie)"
+
+    msg = (
+        "🗓️ **HORARIOS ACTUALES**\n\n"
+        f"🌅 **Mañana**\n{format_list(data['mañana'])}\n\n"
+        f"🌇 **Tarde**\n{format_list(data['tarde'])}\n\n"
+        f"🌙 **Noche**\n{format_list(data['noche'])}"
+    )
+
+    await ctx.send(msg)
