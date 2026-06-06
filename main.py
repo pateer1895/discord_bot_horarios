@@ -1,4 +1,5 @@
 print(">>> MAIN CARGADO CORRECTAMENTE <<<")
+
 import os
 import json
 import discord
@@ -13,8 +14,10 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 DATA_FILE = "horarios.json"
 MESSAGE_ID_FILE = "msgid.json"
 
-# estructura: user_id -> ["mañana","tarde"]
+# estructura: user_id -> ["mañana","tarde","noche"]
 data = {}
+
+MESSAGE_ID = None
 
 
 # ---------------- PERSISTENCIA ----------------
@@ -31,14 +34,13 @@ def save_data():
     with open(DATA_FILE, "w") as f:
         json.dump(data, f)
 
-
 def load_msg_id():
+    global MESSAGE_ID
     try:
         with open(MESSAGE_ID_FILE, "r") as f:
-            return json.load(f)["id"]
+            MESSAGE_ID = json.load(f)["id"]
     except:
-        return None
-
+        MESSAGE_ID = None
 
 def save_msg_id(mid):
     with open(MESSAGE_ID_FILE, "w") as f:
@@ -46,7 +48,7 @@ def save_msg_id(mid):
 
 
 load_data()
-MESSAGE_ID = load_msg_id()
+load_msg_id()
 
 
 # ---------------- UI ----------------
@@ -56,13 +58,13 @@ def build_text():
     tarde = []
     noche = []
 
-    for user, slots in data.items():
+    for user_id, slots in data.items():
         if "mañana" in slots:
-            manana.append(user)
+            manana.append(user_id)
         if "tarde" in slots:
-            tarde.append(user)
+            tarde.append(user_id)
         if "noche" in slots:
-            noche.append(user)
+            noche.append(user_id)
 
     def fmt(lst):
         return "• " + "\n• ".join(lst) if lst else "• (nadie)"
@@ -75,14 +77,14 @@ def build_text():
     )
 
 
-# ---------------- VIEW ----------------
+# ---------------- VIEW (BOTONES) ----------------
 
 class HorariosView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
     def toggle(self, user, slot):
-       uid = user.name
+        uid = str(user.id)  # 👈 FIX IMPORTANTE
 
         if uid not in data:
             data[uid] = []
@@ -127,6 +129,7 @@ async def on_ready():
     # crear mensaje fijo si no existe
     if MESSAGE_ID is None:
         channel = discord.utils.get(bot.get_all_channels(), name="horarios")
+
         if channel:
             msg = await channel.send(build_text(), view=HorariosView())
             MESSAGE_ID = msg.id
@@ -136,6 +139,7 @@ async def on_ready():
 @bot.command()
 async def reset_horarios(ctx):
     global MESSAGE_ID
+
     msg = await ctx.send(build_text(), view=HorariosView())
     MESSAGE_ID = msg.id
     save_msg_id(MESSAGE_ID)
