@@ -1,3 +1,4 @@
+print(">>> MAIN CARGADO CORRECTAMENTE <<<")
 import os
 import json
 import discord
