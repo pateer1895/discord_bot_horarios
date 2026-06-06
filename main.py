@@ -164,5 +164,8 @@ async def on_ready():
 
         print("Mensaje creado automáticamente")
         return
+        print("SERVIDORES:")
+for g in bot.guilds:
+    print(g.name)
 
 bot.run(os.environ["TOKEN"])
