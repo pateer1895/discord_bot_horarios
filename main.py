@@ -53,17 +53,18 @@ load_msg_id()
 
 # ---------------- UI ----------------
 
-async def build_text():
+def build_text():
     manana = []
     tarde = []
     noche = []
 
     for user_id, slots in data.items():
-        try:
-            user = await bot.fetch_user(int(user_id))
-            name = user.name
-        except:
+        user = bot.get_user(int(user_id))
+
+        if user is None:
             name = f"Usuario {user_id}"
+        else:
+            name = user.name
 
         if "mañana" in slots:
             manana.append(name)
