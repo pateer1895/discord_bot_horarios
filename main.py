@@ -135,15 +135,31 @@ class HorariosView(discord.ui.View):
 @bot.event
 async def on_ready():
     global MESSAGE_ID
+
     print(f"Bot conectado como {bot.user}")
 
+    await bot.wait_until_ready()
 
-@bot.command()
-async def reset_horarios(ctx):
-    global MESSAGE_ID
+    # buscar canal
+    channel = discord.utils.get(bot.get_all_channels(), name="horarios")
 
-    msg = await ctx.send(build_text(), view=HorariosView())
+    if channel is None:
+        print("No se encontró el canal #horarios")
+        return
+
+    # si ya hay mensaje guardado
+    if MESSAGE_ID is not None:
+        try:
+            msg = await channel.fetch_message(MESSAGE_ID)
+            await msg.edit(content=build_text(), view=HorariosView())
+            return
+        except:
+            pass
+
+    # si no existe, lo crea
+    msg = await channel.send(build_text(), view=HorariosView())
     MESSAGE_ID = msg.id
+    save_msg_id(MESSAGE_ID)
     save_msg_id(MESSAGE_ID)
 
 
