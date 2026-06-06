@@ -6,132 +6,114 @@ from discord.ext import commands
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-intents.reactions = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-HORA_MESSAGE_ID = None
-HORARIOS_CHANNEL_NAME = "horarios"
 DATA_FILE = "horarios.json"
 
-EMOJIS = {
-    "🌅": "mañana",
-    "🌇": "tarde",
-    "🌙": "noche"
+data = {
+    "mañana": [],
+    "tarde": [],
+    "noche": []
 }
 
-# ------------------ STORAGE ------------------
+HORARIO_MESSAGE_ID = None
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {"mañana": [], "tarde": [], "noche": []}
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
 
-def save_data(data):
+# ---------------- STORAGE ----------------
+
+def save():
     with open(DATA_FILE, "w") as f:
         json.dump(data, f)
 
-data = load_data()
+def load():
+    global data
+    try:
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+    except:
+        pass
 
-# ------------------ BOT ------------------
+load()
+
+
+# ---------------- VIEW (BOTONES) ----------------
+
+class HorarioView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    def update_user(self, user, slot):
+        # quitar de todos
+        for k in data:
+            if user.name in data[k]:
+                data[k].remove(user.name)
+
+        # añadir al nuevo slot
+        data[slot].append(user.name)
+        save()
+
+    async def refresh_message(self, interaction):
+        msg = (
+            "🗓️ **HORARIOS DE QUEDADA**\n\n"
+            f"🌅 Mañana\n{self.format(data['mañana'])}\n\n"
+            f"🌇 Tarde\n{self.format(data['tarde'])}\n\n"
+            f"🌙 Noche\n{self.format(data['noche'])}"
+        )
+        await interaction.message.edit(content=msg, view=self)
+
+    def format(self, lst):
+        return "• " + "\n• ".join(lst) if lst else "• (nadie)"
+
+    @discord.ui.button(label="Mañana", style=discord.ButtonStyle.green)
+    async def manana(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.update_user(interaction.user, "mañana")
+        await interaction.response.defer()
+        await self.refresh_message(interaction)
+
+    @discord.ui.button(label="Tarde", style=discord.ButtonStyle.blurple)
+    async def tarde(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.update_user(interaction.user, "tarde")
+        await interaction.response.defer()
+        await self.refresh_message(interaction)
+
+    @discord.ui.button(label="Noche", style=discord.ButtonStyle.gray)
+    async def noche(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.update_user(interaction.user, "noche")
+        await interaction.response.defer()
+        await self.refresh_message(interaction)
+
+
+# ---------------- BOT ----------------
+
+def build_text():
+    def f(lst):
+        return "• " + "\n• ".join(lst) if lst else "• (nadie)"
+
+    return (
+        "🗓️ **HORARIOS DE QUEDADA**\n\n"
+        f"🌅 Mañana\n{f(data['mañana'])}\n\n"
+        f"🌇 Tarde\n{f(data['tarde'])}\n\n"
+        f"🌙 Noche\n{f(data['noche'])}"
+    )
+
 
 @bot.event
 async def on_ready():
     print(f"Bot conectado como {bot.user}")
 
+
 @bot.command()
 async def crear_horarios(ctx):
-    global HORA_MESSAGE_ID
+    global HORARIO_MESSAGE_ID
 
-    if ctx.channel.name != HORARIOS_CHANNEL_NAME:
-        await ctx.send("Usa este comando en #horarios")
-        return
-
-    msg = await ctx.send(build_message())
-
-    await msg.add_reaction("🌅")
-    await msg.add_reaction("🌇")
-    await msg.add_reaction("🌙")
-
-    HORA_MESSAGE_ID = msg.id
+    msg = await ctx.send(build_text(), view=HorarioView())
+    HORARIO_MESSAGE_ID = msg.id
 
 
 @bot.command()
 async def horarios(ctx):
-    def format_list(lst):
-        return "• " + "\n• ".join(lst) if lst else "• (nadie)"
+    await ctx.send(build_text())
 
-    msg = (
-        "🗓️ **HORARIOS ACTUALES**\n\n"
-        f"🌅 **Mañana**\n{format_list(data['mañana'])}\n\n"
-        f"🌇 **Tarde**\n{format_list(data['tarde'])}\n\n"
-        f"🌙 **Noche**\n{format_list(data['noche'])}"
-    )
-
-    await ctx.send(msg)
-
-# ------------------ REACCIONES ------------------
-
-@bot.event
-async def on_reaction_add(reaction, user):
-    if user.bot:
-        return
-
-    if HORA_MESSAGE_ID is None:
-        return
-
-    if reaction.message.id != HORA_MESSAGE_ID:
-        return
-
-    if reaction.emoji not in EMOJIS:
-        return
-
-    slot = EMOJIS[reaction.emoji]
-
-    for k in data:
-        if user.name in data[k]:
-            data[k].remove(user.name)
-
-    data[slot].append(user.name)
-    save_data(data)
-
-    await reaction.message.edit(content=build_message())
-
-
-@bot.event
-async def on_reaction_remove(reaction, user):
-    if user.bot:
-        return
-
-    if HORA_MESSAGE_ID is None:
-        return
-
-    if reaction.message.id != HORA_MESSAGE_ID:
-        return
-
-    if reaction.emoji not in EMOJIS:
-        return
-
-    slot = EMOJIS[reaction.emoji]
-
-    if user.name in data[slot]:
-        data[slot].remove(user.name)
-        save_data(data)
-
-    await reaction.message.edit(content=build_message())
-
-# ------------------ BUILD MESSAGE ------------------
-
-def build_message():
-    def format_list(lst):
-        return "• " + "\n• ".join(lst) if lst else "• (nadie)"
-
-    return (
-        "🗓️ **HORARIOS DE QUEDADA**\n\n"
-        f"🌅 **Mañana**\n{format_list(data['mañana'])}\n\n"
-        f"🌇 **Tarde**\n{format_list(data['tarde'])}\n\n"
-        f"🌙 **Noche**\n{format_list(data['noche'])}"
-    )
 
 bot.run(os.environ["TOKEN"])
