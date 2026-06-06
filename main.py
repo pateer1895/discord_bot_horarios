@@ -14,7 +14,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 DATA_FILE = "horarios.json"
 MESSAGE_ID_FILE = "msgid.json"
 
-# estructura: user_id -> ["mañana","tarde","noche"]
+# user_id -> ["mañana","tarde","noche"]
 data = {}
 
 MESSAGE_ID = None
@@ -51,19 +51,25 @@ load_data()
 load_msg_id()
 
 
-# ---------------- UI ----------------
+# ---------------- UTIL ----------------
 
-async def build_text():
+def get_username(user_id: str):
+    """Convierte ID a nombre usando cache del bot"""
+    user = bot.get_user(int(user_id))
+    if user:
+        return user.name
+    return f"Usuario"
+
+
+# ---------------- MENSAJE ----------------
+
+def build_text():
     manana = []
     tarde = []
     noche = []
 
     for user_id, slots in data.items():
-        try:
-            user = await bot.fetch_user(int(user_id))
-            name = user.name
-        except:
-            name = f"Usuario {user_id}"
+        name = get_username(user_id)
 
         if "mañana" in slots:
             manana.append(name)
@@ -83,14 +89,14 @@ async def build_text():
     )
 
 
-# ---------------- VIEW (BOTONES) ----------------
+# ---------------- BOTONES ----------------
 
 class HorariosView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
     def toggle(self, user, slot):
-        uid = str(user.id)  # 👈 FIX IMPORTANTE
+        uid = str(user.id)
 
         if uid not in data:
             data[uid] = []
@@ -102,26 +108,26 @@ class HorariosView(discord.ui.View):
 
         save_data()
 
-    async def update(self, interaction):
+    async def update_msg(self, interaction):
         await interaction.message.edit(content=build_text(), view=self)
 
     @discord.ui.button(label="Mañana", style=discord.ButtonStyle.green)
     async def manana(self, interaction, button):
         self.toggle(interaction.user, "mañana")
         await interaction.response.defer()
-        await self.update(interaction)
+        await self.update_msg(interaction)
 
     @discord.ui.button(label="Tarde", style=discord.ButtonStyle.blurple)
     async def tarde(self, interaction, button):
         self.toggle(interaction.user, "tarde")
         await interaction.response.defer()
-        await self.update(interaction)
+        await self.update_msg(interaction)
 
     @discord.ui.button(label="Noche", style=discord.ButtonStyle.gray)
     async def noche(self, interaction, button):
         self.toggle(interaction.user, "noche")
         await interaction.response.defer()
-        await self.update(interaction)
+        await self.update_msg(interaction)
 
 
 # ---------------- BOT ----------------
@@ -129,17 +135,7 @@ class HorariosView(discord.ui.View):
 @bot.event
 async def on_ready():
     global MESSAGE_ID
-
     print(f"Bot conectado como {bot.user}")
-
-    # crear mensaje fijo si no existe
-    if MESSAGE_ID is None:
-        channel = discord.utils.get(bot.get_all_channels(), name="horarios")
-
-        if channel:
-            msg = await channel.send(build_text(), view=HorariosView())
-            MESSAGE_ID = msg.id
-            save_msg_id(MESSAGE_ID)
 
 
 @bot.command()
