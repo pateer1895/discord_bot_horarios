@@ -140,27 +140,29 @@ async def on_ready():
 
     await bot.wait_until_ready()
 
-    # buscar canal
-    channel = discord.utils.get(bot.get_all_channels(), name="horarios")
+    # recorrer servidores del bot
+    for guild in bot.guilds:
+        channel = discord.utils.get(guild.text_channels, name="horarios")
 
-    if channel is None:
-        print("No se encontró el canal #horarios")
+        if channel is None:
+            continue
+
+        # si ya existe mensaje guardado
+        if MESSAGE_ID is not None:
+            try:
+                msg = await channel.fetch_message(MESSAGE_ID)
+                await msg.edit(content=build_text(), view=HorariosView())
+                print("Mensaje actualizado")
+                return
+            except:
+                pass
+
+        # crear mensaje si no existe
+        msg = await channel.send(build_text(), view=HorariosView())
+        MESSAGE_ID = msg.id
+        save_msg_id(MESSAGE_ID)
+
+        print("Mensaje creado automáticamente")
         return
-
-    # si ya hay mensaje guardado
-    if MESSAGE_ID is not None:
-        try:
-            msg = await channel.fetch_message(MESSAGE_ID)
-            await msg.edit(content=build_text(), view=HorariosView())
-            return
-        except:
-            pass
-
-    # si no existe, lo crea
-    msg = await channel.send(build_text(), view=HorariosView())
-    MESSAGE_ID = msg.id
-    save_msg_id(MESSAGE_ID)
-    save_msg_id(MESSAGE_ID)
-
 
 bot.run(os.environ["TOKEN"])
