@@ -34,25 +34,11 @@ def save_data(data):
 
 data = load_data()
 
-# ------------------ EMBED TABLE ------------------
-
-def build_message():
-    def format_list(lst):
-        return "• " + "\n• ".join(lst) if lst else "• (nadie)"
-
-    return (
-        "🗓️ **HORARIOS DE QUEDADA**\n\n"
-        f"🌅 **Mañana**\n{format_list(data['mañana'])}\n\n"
-        f"🌇 **Tarde**\n{format_list(data['tarde'])}\n\n"
-        f"🌙 **Noche**\n{format_list(data['noche'])}"
-    )
-
 # ------------------ BOT ------------------
 
 @bot.event
 async def on_ready():
     print(f"Bot conectado como {bot.user}")
-
 
 @bot.command()
 async def crear_horarios(ctx):
@@ -71,6 +57,22 @@ async def crear_horarios(ctx):
     HORA_MESSAGE_ID = msg.id
 
 
+@bot.command()
+async def horarios(ctx):
+    def format_list(lst):
+        return "• " + "\n• ".join(lst) if lst else "• (nadie)"
+
+    msg = (
+        "🗓️ **HORARIOS ACTUALES**\n\n"
+        f"🌅 **Mañana**\n{format_list(data['mañana'])}\n\n"
+        f"🌇 **Tarde**\n{format_list(data['tarde'])}\n\n"
+        f"🌙 **Noche**\n{format_list(data['noche'])}"
+    )
+
+    await ctx.send(msg)
+
+# ------------------ REACCIONES ------------------
+
 @bot.event
 async def on_reaction_add(reaction, user):
     if user.bot:
@@ -87,7 +89,6 @@ async def on_reaction_add(reaction, user):
 
     slot = EMOJIS[reaction.emoji]
 
-    # evitar duplicados
     for k in data:
         if user.name in data[k]:
             data[k].remove(user.name)
@@ -120,18 +121,17 @@ async def on_reaction_remove(reaction, user):
 
     await reaction.message.edit(content=build_message())
 
+# ------------------ BUILD MESSAGE ------------------
 
-bot.run(os.environ["TOKEN"])
-@bot.command()
-async def horarios(ctx):
+def build_message():
     def format_list(lst):
         return "• " + "\n• ".join(lst) if lst else "• (nadie)"
 
-    msg = (
-        "🗓️ **HORARIOS ACTUALES**\n\n"
+    return (
+        "🗓️ **HORARIOS DE QUEDADA**\n\n"
         f"🌅 **Mañana**\n{format_list(data['mañana'])}\n\n"
         f"🌇 **Tarde**\n{format_list(data['tarde'])}\n\n"
         f"🌙 **Noche**\n{format_list(data['noche'])}"
     )
 
-    await ctx.send(msg)
+bot.run(os.environ["TOKEN"])
