@@ -82,7 +82,7 @@ class HorariosView(discord.ui.View):
         super().__init__(timeout=None)
 
     def toggle(self, user, slot):
-        uid = str(user.id)
+       uid = user.name
 
         if uid not in data:
             data[uid] = []
