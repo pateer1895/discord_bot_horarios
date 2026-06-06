@@ -82,7 +82,7 @@ def build_text():
         return "• " + "\n• ".join(lst) if lst else "• (nadie)"
 
     return (
-        "🗓️ **HORARIOS DE QUEDADA**\n\n"
+        "🗓️ **HORARIOS DISPONIBILIDAD**\n\n"
         f"🌅 Mañana\n{fmt(manana)}\n\n"
         f"🌇 Tarde\n{fmt(tarde)}\n\n"
         f"🌙 Noche\n{fmt(noche)}"
